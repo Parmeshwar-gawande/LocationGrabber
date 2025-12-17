@@ -19,12 +19,20 @@ console.log('DEBUG MONGODB_URI present:', !!process.env.MONGODB_URI);
 
 // ===== MONGODB CONNECTION =====
 let Location;
+let connectPromise = null;
 
 if (process.env.MONGODB_URI) {
-  mongoose
+  // Single shared connect promise
+  connectPromise = mongoose
     .connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Error (connect):', err));
+    .then(() => {
+      console.log('✅ MongoDB Connected');
+      return true;
+    })
+    .catch(err => {
+      console.error('❌ MongoDB Error (connect):', err);
+      throw err;
+    });
 
   const locationSchema = new mongoose.Schema({
     lat: String,
@@ -39,6 +47,11 @@ if (process.env.MONGODB_URI) {
   // LOCATION ENDPOINT (Mongo mode)
   app.post('/api/location', async (req, res) => {
     try {
+      // Connection ready hone ka wait
+      if (connectPromise) {
+        await connectPromise;
+      }
+
       const { lat, lon, accuracy, email } = req.body;
       console.log('📍 Location received (Mongo mode):', {
         lat,
@@ -99,6 +112,10 @@ app.get('/test-insert', async (req, res) => {
         status: 'error',
         error: 'Location model not initialized (no MONGODB_URI)'
       });
+    }
+
+    if (connectPromise) {
+      await connectPromise;
     }
 
     const doc = await Location.create({

