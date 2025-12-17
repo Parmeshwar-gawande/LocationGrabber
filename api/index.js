@@ -14,14 +14,15 @@ app.use(express.urlencoded({ extended: true }));
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ===== DEBUG ENV (local + vercel dono ke liye useful) =====
+// ===== DEBUG ENV =====
 console.log('DEBUG MONGODB_URI present:', !!process.env.MONGODB_URI);
 
 // ===== MONGODB CONNECTION =====
-let Location; // model ko outer scope me rakh
+let Location;
 
 if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI)
+  mongoose
+    .connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Error (connect):', err));
 
@@ -39,7 +40,12 @@ if (process.env.MONGODB_URI) {
   app.post('/api/location', async (req, res) => {
     try {
       const { lat, lon, accuracy, email } = req.body;
-      console.log('📍 Location received (Mongo mode):', { lat, lon, accuracy, email });
+      console.log('📍 Location received (Mongo mode):', {
+        lat,
+        lon,
+        accuracy,
+        email
+      });
 
       const newLocation = new Location({
         lat,
@@ -61,13 +67,17 @@ if (process.env.MONGODB_URI) {
       res.status(500).json({ status: 'error', error: err.message });
     }
   });
-
 } else {
   // LOCATION ENDPOINT (No DB mode)
   app.post('/api/location', (req, res) => {
     try {
       const { lat, lon, accuracy, email } = req.body;
-      console.log('📍 Location received (NO DB mode):', { lat, lon, accuracy, email });
+      console.log('📍 Location received (NO DB mode):', {
+        lat,
+        lon,
+        accuracy,
+        email
+      });
 
       res.json({
         status: 'success',
@@ -85,7 +95,10 @@ if (process.env.MONGODB_URI) {
 app.get('/test-insert', async (req, res) => {
   try {
     if (!Location) {
-      return res.status(500).json({ status: 'error', error: 'Location model not initialized (no MONGODB_URI)' });
+      return res.status(500).json({
+        status: 'error',
+        error: 'Location model not initialized (no MONGODB_URI)'
+      });
     }
 
     const doc = await Location.create({
