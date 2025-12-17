@@ -9,6 +9,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Static files
+app.use(express.static(path.join(__dirname, '../public')));
+
 // ============= LOCATION ENDPOINT =============
 app.get('/api/location', (req, res) => {
   try {
@@ -16,7 +19,6 @@ app.get('/api/location', (req, res) => {
 
     console.log('📍 Location received:', { lat, lon, accuracy, email });
 
-    // Bas log kar, DB me nahi save kar
     res.json({ 
       status: 'success', 
       message: 'Location received',
@@ -29,10 +31,7 @@ app.get('/api/location', (req, res) => {
   }
 });
 
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Root route
+// Root route - serve HTML
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
@@ -42,9 +41,8 @@ module.exports = app;
 
 // Local server
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
+  const PORT = process.env.PORT || 7777;
   app.listen(PORT, () => {
-    console.log(`\n🚀 Server running at http://localhost:${PORT}`);
-    console.log(`📍 Open: http://localhost:${PORT}\n`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
   });
 }

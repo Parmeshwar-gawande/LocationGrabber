@@ -1,6 +1,8 @@
 require('dotenv').config();
 const app = require('./api/index.js');
 
-app.listen(7777, () => {
-  console.log(`Server running at http://localhost:7777`);
+const PORT = process.env.PORT || 7777;
+
+app.listen(PORT, () => {
+  console.log(`✅ Server started on port ${PORT}`);
 });
