@@ -20,7 +20,7 @@ console.log('DEBUG MONGODB_URI present:', !!process.env.MONGODB_URI);
 
 // ===== MONGODB CONNECTION =====
 let Location;
-let Click;            // <-- NEW model for tracker
+let Click;             // tracker model
 let connectPromise = null;
 
 if (process.env.MONGODB_URI) {
@@ -36,7 +36,7 @@ if (process.env.MONGODB_URI) {
       throw err;
     });
 
-  // Existing location schema (from original code)
+  // Existing location schema (old flow)
   const locationSchema = new mongoose.Schema({
     lat: String,
     lon: String,
@@ -48,7 +48,7 @@ if (process.env.MONGODB_URI) {
   Location = mongoose.model('Location', locationSchema);
 
   // ==============================
-  // NEW: Tracker schema (locations collection)
+  // Tracker schema (locations collection)
   // ==============================
   const clickSchema = new mongoose.Schema(
     {
@@ -72,7 +72,6 @@ if (process.env.MONGODB_URI) {
   // =======================================
   app.post('/api/location', async (req, res) => {
     try {
-      // Connection ready hone ka wait
       if (connectPromise) {
         await connectPromise;
       }
@@ -128,8 +127,8 @@ if (process.env.MONGODB_URI) {
 
       const ua = req.headers['user-agent'] || 'unknown';
 
-      // Optional: agar tu frontend se lat/lon/country/city bhejta hai
-      const { lat, lon, country, city } = req.query;
+      // Optional: frontend se lat/lon/country/city query ya body se bhej
+      const { lat, lon, country, city, accuracy } = req.query;
 
       const doc = new Click({
         owner_id: String(uid),
@@ -139,7 +138,9 @@ if (process.env.MONGODB_URI) {
         lon: lon ? Number(lon) : undefined,
         country: country || undefined,
         city: city || undefined,
-        path: req.url
+        path: req.url,
+        // accuracy agar chahiye to store karo:
+        // accuracy: accuracy ? Number(accuracy) : undefined,
       });
 
       await doc.save();
