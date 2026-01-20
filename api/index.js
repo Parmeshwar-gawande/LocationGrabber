@@ -62,7 +62,7 @@ if (process.env.MONGODB_URI) {
       path: String,
       ts: { type: Date, default: Date.now }
     },
-    { collection: 'locations' } // same collection name jo bot use kar raha hai
+    { collection: 'locations' }
   );
 
   Click = mongoose.models.Click || mongoose.model('Click', clickSchema);
@@ -127,7 +127,7 @@ if (process.env.MONGODB_URI) {
 
       const ua = req.headers['user-agent'] || 'unknown';
 
-      // Optional: frontend se lat/lon/country/city query ya body se bhej
+      // Optional: frontend se lat/lon/country/city bhej
       const { lat, lon, country, city, accuracy } = req.query;
 
       const doc = new Click({
@@ -138,9 +138,8 @@ if (process.env.MONGODB_URI) {
         lon: lon ? Number(lon) : undefined,
         country: country || undefined,
         city: city || undefined,
-        path: req.url,
-        // accuracy agar chahiye to store karo:
-        // accuracy: accuracy ? Number(accuracy) : undefined,
+        path: req.url
+        // accuracy: accuracy ? Number(accuracy) : undefined,  // agar chahiye
       });
 
       await doc.save();
