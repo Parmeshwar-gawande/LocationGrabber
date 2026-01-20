@@ -139,7 +139,7 @@ if (process.env.MONGODB_URI) {
         country: country || undefined,
         city: city || undefined,
         path: req.url
-        // accuracy: accuracy ? Number(accuracy) : undefined,  // agar chahiye
+        // accuracy: accuracy ? Number(accuracy) : undefined,
       });
 
       await doc.save();
